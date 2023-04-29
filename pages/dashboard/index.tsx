@@ -1,133 +1,188 @@
-import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
 import { useUser } from "@/utils/auth";
-import { User, getAuth, onAuthStateChanged } from "firebase/auth";
-import MapComponent from "../map";
+import { useRouter } from "next/router";
+import { useState } from "react";
+import { getAuth } from "firebase/auth";
 import app from "@/config/firebase";
+import Layout from "@/components/MainLayout";
+import MapComponent from "../map";
 
-const firebaseLogout = () => {
-	const auth = getAuth(app);
-	auth.signOut();
-};
+const auth = getAuth(app);
 
 export default function Dashboard() {
 	const { user, loading } = useUser();
+	const router = useRouter();
+
 	const [source, setSource] = useState("");
 	const [destination, setDestination] = useState("");
-	const [sidebarOpen, setSidebarOpen] = useState(false);
-	const router = useRouter();
-	const auth = getAuth();
+	const [showModal, setShowModal] = useState(false);
+	const [selectedCab, setSelectedCab] = useState(null);
+	const [currentStep, setCurrentStep] = useState(0);
 
-	const handleLogout = async () => {
-		try {
-			await auth.signOut();
-			router.replace("/login");
-		} catch (error) {
-			console.error(error);
-		}
+	// start booking
+	const handleBooking = (e) => {
+		e.preventDefault();
+		setShowModal(true);
+	};
+
+	const handleModalClose = () => {
+		setShowModal(false);
+		setCurrentStep(0);
+		setSelectedCab(null);
+	};
+
+	const handleCabSelect = (cab) => {
+		setSelectedCab(cab);
+		setCurrentStep(1);
+	};
+
+	const handleConfirmation = () => {
+		// TODO: Implement confirmation logic
+		setCurrentStep(2);
+	};
+
+	const handleBack = () => {
+		setCurrentStep(currentStep - 1);
 	};
 
 	if (loading) {
 		return <p>Loading...</p>;
 	}
 
-	if (user == null) {
+	if (!user) {
 		router.replace("/login");
-		return;
+		return null;
 	}
 
+	let cabs = [{ name: "uday", description: "AZ*@2343", price: 12.32 }];
+	console.log(currentStep);
 	return (
-		<div className="flex flex-col h-screen">
-			<div className="flex items-center justify-between bg-gray-800 text-white p-4">
-				<button
-					className="text-white focus:outline-none"
-					onClick={() => setSidebarOpen(!sidebarOpen)}
+		<Layout>
+			<div className="p-4">
+				<form
+					onSubmit={(e) => {
+						e.preventDefault();
+						handleBooking(e);
+					}}
 				>
-					<svg className="h-6 w-6 fill-current" viewBox="0 0 24 24">
-						{sidebarOpen ? (
-							<path d="M6 18L18 6M6 6l12 12" />
-						) : (
-							<path d="M4 6h16M4 12h16M4 18h16" />
-						)}
-					</svg>
-				</button>
-			</div>
-			<div className="flex-1 flex flex-col md:flex-row">
-				<div
-					className={`bg-gray-800 text-white w-full md:w-64 flex-shrink-0 ${
-						sidebarOpen ? "block" : "hidden"
-					}`}
-				>
-					<div className="p-4">
-						<h2 className="text-lg font-bold mb-2">Profile</h2>
-						<p>{user.email}</p>
-					</div>
-					<div className="p-4">
-						<h2 className="text-lg font-bold mb-2">
-							Previous Rides
-						</h2>
-						<ul>
-							<li>Ride 1</li>
-							<li>Ride 2</li>
-							<li>Ride 3</li>
-						</ul>
-					</div>
-					<div className="p-4">
-						<button
-							className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 "
-							onClick={(e) => {
-								e.preventDefault();
-								localStorage.removeItem("user");
-								firebaseLogout();
-							}}
+					<div className="mb-4">
+						<label
+							htmlFor="source"
+							className="block text-gray-700 font-bold mb-2"
 						>
-							Logout
-						</button>
+							Source
+						</label>
+						<input
+							type="text"
+							id="source"
+							className="w-full px-3 py-2 border rounded"
+							value={source}
+							onChange={(e) => setSource(e.target.value)}
+						/>
 					</div>
-				</div>
-				<div className="flex-1 flex flex-col">
-					<div className="p-4">
-						<form>
-							<div className="mb-4">
-								<label
-									htmlFor="source"
-									className="block text-gray-700 font-bold mb-2"
-								>
-									Source
-								</label>
-								<input
-									type="text"
-									id="source"
-									className="w-full px-3 py-2 border rounded"
-									value={source}
-									onChange={(e) => setSource(e.target.value)}
-								/>
-							</div>
-							<div className="mb-4">
-								<label
-									htmlFor="destination"
-									className="block text-gray-700 font-bold mb-2"
-								>
-									Destination
-								</label>
-								<input
-									type="text"
-									id="destination"
-									className="w-full px-3 py-2 border rounded"
-									value={destination}
-									onChange={(e) =>
-										setDestination(e.target.value)
-									}
-								/>
-							</div>
-							<button type="submit">Start Driving</button>
-						</form>
+					<div className="mb-4">
+						<label
+							htmlFor="destination"
+							className="block text-gray-700 font-bold mb-2"
+						>
+							Destination
+						</label>
+						<input
+							type="text"
+							id="destination"
+							className="w-full px-3 py-2 border rounded"
+							value={destination}
+							onChange={(e) => setDestination(e.target.value)}
+						/>
 					</div>
-					<div className="flex-1">
-						<MapComponent />
-					</div>
-				</div>
+					<button
+						type="submit"
+						className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+					>
+						Start Driving
+					</button>
+				</form>
 			</div>
-		</div>
+			<div className="flex-1">
+				<MapComponent source={source} destination={destination} />
+			</div>
+			{showModal && (
+				<div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center">
+					<div className="bg-white p-4 rounded-md">
+						<h2 className="text-lg font-bold mb-2">Book a Cab</h2>
+						{currentStep === 0 && (
+							<p className="mb-4">
+								Please select a cab for your ride from {source}{" "}
+								to {destination}
+							</p>
+						)}
+						{currentStep === 1 && (
+							<p className="mb-4">
+								You have selected {selectedCab.name} for your
+								ride from {source} to {destination}.
+							</p>
+						)}
+						{currentStep === 2 && (
+							<p className="mb-4">
+								Your booking has been confirmed.
+							</p>
+						)}
+						<div className="flex flex-wrap -mx-2">
+							{currentStep === 0 &&
+								cabs.map((cab) => (
+									<div
+										key={cab.id}
+										className="w-1/2 px-2 mb-4"
+									>
+										<div
+											className={`bg-white p-4 rounded-md border ${
+												selectedCab === cab
+													? "border-blue-500"
+													: ""
+											}`}
+											onClick={() => {
+												handleCabSelect(cab);
+											}}
+										>
+											<h3 className="text-lg font-bold mb-2">
+												{cab.name}
+											</h3>
+											<p className="text-gray-700">
+												{cab.description}
+											</p>
+											<p className="text-gray-700 font-bold mt-2">
+												{cab.price}
+											</p>
+										</div>
+									</div>
+								))}
+						</div>
+						{currentStep === 1 && (
+							<div className="flex">
+								<button
+									className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mr-2"
+									onClick={handleConfirmation}
+								>
+									Confirm
+								</button>
+								<button
+									className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded"
+									onClick={handleBack}
+								>
+									Back
+								</button>
+							</div>
+						)}
+						{currentStep === 2 && (
+							<button
+								className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+								onClick={handleModalClose}
+							>
+								Close
+							</button>
+						)}
+					</div>
+				</div>
+			)}
+		</Layout>
 	);
 }

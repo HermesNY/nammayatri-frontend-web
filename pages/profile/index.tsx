@@ -1,3 +1,4 @@
+import Layout from "@/components/MainLayout";
 import { useUser } from "@/utils/auth";
 import { useRouter } from "next/router";
 import React from "react";
@@ -14,10 +15,11 @@ const Profile = () => {
 		return;
 	}
 	return (
-		<div>
+		<Layout>
+			<h5>Profile Page</h5>
 			Profile
 			<p>{user.email}</p>
-		</div>
+		</Layout>
 	);
 };
 
