@@ -13,7 +13,6 @@ import {
 } from "firebase/firestore";
 import app from "@/config/firebase";
 import Layout from "@/components/MainLayout";
-// import MapComponent from "../map";
 
 import { v4 as uuidv4 } from "uuid";
 
@@ -33,12 +32,12 @@ const validateMap: () => boolean = () => {
 	if (validateMicrosoft() && map) return true;
 	return false;
 };
-
+// var Microsoft: any;
 const loadMap: () => void = () => {
-	if (!validateMicrosoft()) {
-		notifyError("Maps SDK not loaded");
-		return;
-	}
+	// if (!validateMicrosoft()) {
+	// 	notifyError("Maps SDK not loaded");
+	// 	return;
+	// }
 	if (true) {
 		try {
 			map = new Microsoft.Maps.Map(document.getElementById("myMap"), {
@@ -61,7 +60,7 @@ type Directions = {
 const loadDirections: (directions: Directions) => void = (
 	directions: Directions
 ) => {
-	if (validateMap() || true) {
+	if (true) {
 		const { sourceLoc, destinationLoc } = directions;
 		Microsoft.Maps.loadModule("Microsoft.Maps.Directions", () => {
 			var directionsManager =
