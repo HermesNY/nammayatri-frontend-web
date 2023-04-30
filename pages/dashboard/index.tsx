@@ -39,7 +39,7 @@ const loadMap: () => void = () => {
 		notifyError("Maps SDK not loaded");
 		return;
 	}
-	if (!validateMap() || true) {
+	if (true) {
 		try {
 			map = new Microsoft.Maps.Map(document.getElementById("myMap"), {
 				center: new Microsoft.Maps.Location(12.97194, 77.59369),
@@ -110,8 +110,6 @@ export default function Dashboard() {
 	const mapRef = useRef(null);
 	const [dist, setDist] = useState(4);
 
-	// const [source, setSource] = useState("");
-	// const [destination, setDestination] = useState("");
 	const [showModal, setShowModal] = useState(false);
 	const [selectedCab, setSelectedCab]: any = useState(null);
 	const [currentStep, setCurrentStep] = useState(0);
@@ -267,7 +265,7 @@ export default function Dashboard() {
 		if (!locInput || !locInputContainer) {
 			throw Error("The input or container don't exist");
 		}
-		if (validateMicrosoft() && validateMap()) {
+		if (true) {
 			Microsoft.Maps.loadModule(
 				"Microsoft.Maps.AutoSuggest",
 				function () {
