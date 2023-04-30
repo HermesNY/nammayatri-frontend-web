@@ -10,10 +10,10 @@ const firebaseLogout = () => {
 
 const Navbar = () => {
 	return (
-		<nav>
+		<nav className="flex flex-col ">
 			<h1>NammaYatri</h1>
 
-			<div className="links">
+			<div className="links flex flex-col bg-slate-400 ">
 				<Link href="/dashboard">Dashboard</Link>
 				<Link href="/rides">Rides</Link>
 

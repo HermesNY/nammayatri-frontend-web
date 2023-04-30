@@ -4,125 +4,234 @@ import React, { useEffect, useRef, useState } from "react";
 
 var map: any = null;
 
-let mapLoaded: boolean = false;
+type LocationType = "source" | "destination";
 
 const notifyError: (message: string) => void = (message) => {
-	alert(message);
+	//   alert(message);
 };
 
 const validateMicrosoft: () => boolean = () => {
-	// try {
-	// 	if (!Microsoft) {
-	// 		return false;
-	// 	}
-	// 	return true;
-	// } catch (err) {
-	// 	console.error(err);
-	// 	return false;
-	// }
 	return true;
 };
 
 const validateMap: () => boolean = () => {
-	if (validateMicrosoft()) if (map) return true;
-
+	if (validateMicrosoft() && map) return true;
 	return false;
 };
 
 const loadMap: () => void = () => {
-	// if map is already loaded or Microsoft is not defined, return
 	if (!validateMicrosoft()) {
-		notifyError("maps sdk not loaded");
+		notifyError("Maps SDK not loaded");
 		return;
 	}
 	if (!validateMap()) {
-		map = new Microsoft.Maps.Map(document.getElementById("myMap"), {
-			/* No need to set credentials if already passed in URL */
-			center: new Microsoft.Maps.Location(47.606209, -122.332071),
-			zoom: 12,
-		});
+		try {
+			map = new Microsoft.Maps.Map(document.getElementById("myMap"), {
+				center: new Microsoft.Maps.Location(12.97194, 77.59369),
+				zoom: 12,
+			});
+		} catch (e) {
+			console.error(e);
+		}
 	} else {
 		notifyError("Map already loaded");
 	}
 };
 
-const loadDirections: () => void = () => {
-	console.log(map);
-	if (validateMap()) {
-		console.log("direction");
+type Directions = {
+	sourceLoc: { label: string; lat: number; lng: number };
+	destinationLoc: { label: string; lat: number; lng: number };
+};
 
+const loadDirections: (directions: Directions) => void = (
+	directions: Directions
+) => {
+	if (validateMap() || true) {
+		const { sourceLoc, destinationLoc } = directions;
 		Microsoft.Maps.loadModule("Microsoft.Maps.Directions", () => {
 			var directionsManager =
 				new Microsoft.Maps.Directions.DirectionsManager(map);
-			// Set Route Mode to driving
 			directionsManager.setRequestOptions({
 				routeMode: Microsoft.Maps.Directions.RouteMode.driving,
+				maxRoutes: 1,
+				optimize: 1,
+				routeDraggable: false,
 			});
 			var waypoint1 = new Microsoft.Maps.Directions.Waypoint({
-				address: "Redmond",
+				address: sourceLoc.label || "Redmond",
 				location: new Microsoft.Maps.Location(
-					47.67683029174805,
-					-122.1099624633789
+					sourceLoc.lat || 47.67683029174805,
+					sourceLoc.lng || -122.1099624633789
 				),
 			});
 			var waypoint2 = new Microsoft.Maps.Directions.Waypoint({
-				address: "Seattle",
+				address: destinationLoc.label || "Seattle",
 				location: new Microsoft.Maps.Location(
-					47.59977722167969,
-					-122.33458709716797
+					destinationLoc.lat || 47.59977722167969,
+					destinationLoc.lng || -122.33458709716797
 				),
 			});
 			directionsManager.addWaypoint(waypoint1);
 			directionsManager.addWaypoint(waypoint2);
-			// Set the element in which the itinerary will be rendered
-			directionsManager.setRenderOptions({
-				itineraryContainer: document.getElementById("printoutPanel"),
+			console.log(
+				directionsManager,
+				directionsManager.route,
+				directionsManager.summary
+			);
+			directionsManager.calculateDirections((result) => {
+				console.log("res", result);
+				const distance =
+					result.routes[0].routeLegs[0].travelDistance.toFixed(2) +
+					" km";
+				document.getElementById("distance").innerHTML = distance;
 			});
-			directionsManager.calculateDirections();
 		});
 	} else {
-		notifyError("Unable to direct   ");
+		notifyError("Unable to get directions");
 	}
 };
 
 const MapComponent = () => {
-	const [location, setLocation] = useState(null);
+	const [source, setSource] = useState(null);
+	const [destination, setDestination] = useState(null);
+
 	const mapRef = useRef(null);
-	function GetMap() {
-		loadMap();
-	}
-	console.log(process.env.MAPS_KEY);
-	useEffect(() => {}, []);
+
+	const selectedSuggestion = (
+		suggestionResult: any,
+		locationDesc: LocationType
+	) => {
+		const { latitude, longitude } = suggestionResult.location;
+		const label = suggestionResult.formattedSuggestion;
+		const location = { label, lat: latitude, lng: longitude };
+		if (locationDesc === "source") {
+			setSource(location);
+		} else {
+			setDestination(location);
+		}
+	};
+
+	const autosuggestLocation: (locationDesc: LocationType) => void = (
+		locationDesc
+	) => {
+		const locInput = document.getElementById(`${locationDesc}Loc`);
+		const locInputContainer = document.getElementById(
+			`${locationDesc}LocContainer`
+		);
+		if (!locInput || !locInputContainer) {
+			throw Error("The input or container don't exist");
+		}
+		if (validateMicrosoft() && validateMap()) {
+			Microsoft.Maps.loadModule(
+				"Microsoft.Maps.AutoSuggest",
+				function () {
+					var options = {
+						maxResults: 4,
+						map: map,
+					};
+					var manager = new Microsoft.Maps.AutosuggestManager(
+						options
+					);
+					manager.attachAutosuggest(
+						locInput,
+						locInputContainer,
+						(suggestionResult) =>
+							selectedSuggestion(suggestionResult, locationDesc)
+					);
+				}
+			);
+		}
+	};
+
+	const suggestSource: () => void = () => {
+		autosuggestLocation("source");
+	};
+
+	const suggestDestination: () => void = () => {
+		autosuggestLocation("destination");
+	};
+
+	useEffect(() => {
+		if (!mapRef.current) return;
+		setTimeout(() => {
+			loadMap();
+			suggestSource();
+			suggestDestination();
+		}, 1000);
+	}, [mapRef]);
+
 	return (
 		<>
 			<Script
 				type="text/javascript"
+				onLoad={() => {
+					setTimeout(() => {
+						loadMap();
+					}, 1000);
+				}}
 				src={`https://www.bing.com/api/maps/mapcontrol?callback=GetMap&key=${process.env.NEXT_PUBLIC_MAPS_KEY}`}
 			/>
 
 			<div>
 				<div>
 					<form
+						className="m-4"
 						onSubmit={(e) => {
 							e.preventDefault();
-							loadDirections();
+							loadDirections({
+								sourceLoc: source,
+								destinationLoc: destination,
+							});
 						}}
 					>
-						<input
-							type="text"
-							id="sourceLoc"
-							name="sourceLoc"
-							placeholder="Enter Source "
-						/>
-						<input
-							type="text"
-							id="destinationLoc"
-							name="destinationLoc"
-							placeholder="Enter Destination "
-						/>
-						<button type="button" onClick={GetMap}>
-							Load Map{" "}
-						</button>
+						<div className="mb-4">
+							<label
+								htmlFor="source"
+								className="block text-gray-700 font-bold mb-2"
+							>
+								Source
+							</label>
+							<div id="sourceLocContainer">
+								<input
+									type="text"
+									id="sourceLoc"
+									name="sourceLoc"
+									className="w-full px-3 py-2 border rounded"
+									value={source?.label || ""}
+									onChange={(e) =>
+										setSource({
+											...source,
+											label: e.target.value,
+										})
+									}
+									autoComplete="none"
+								/>
+							</div>
+						</div>
+						<div className="mb-4">
+							<label
+								htmlFor="destination"
+								className="block text-gray-700 font-bold mb-2"
+							>
+								Destination
+							</label>
+							<div id="destinationLocContainer">
+								<input
+									type="text"
+									id="destinationLoc"
+									name="destinationLoc"
+									className="w-full px-3 py-2 border rounded"
+									value={destination?.label || ""}
+									onChange={(e) =>
+										setDestination({
+											...destination,
+											label: e.target.value,
+										})
+									}
+									autoComplete="none"
+								/>
+							</div>
+						</div>
 						<button type="submit">Get Directions</button>
 					</form>
 				</div>
@@ -131,11 +240,16 @@ const MapComponent = () => {
 					<div
 						style={{
 							width: "800px",
-							height: "500px",
+							height: "400px",
 						}}
 						id="myMap"
 						ref={mapRef}
 					></div>
+				</div>
+
+				{/* <div id="printoutPanel"> </div> */}
+				<div>
+					Distance: <span id="distance"></span>
 				</div>
 			</div>
 		</>

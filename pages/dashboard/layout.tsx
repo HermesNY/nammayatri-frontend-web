@@ -8,7 +8,7 @@ const DLayout = (props: { children: React.ReactElement }) => {
 		<>
 			<Navbar />
 
-			{props.children}
+			<main>{props.children}</main>
 
 			<footer className="flex justify-center items-center h-16 bg-black text-white">
 				<p className="text-center">

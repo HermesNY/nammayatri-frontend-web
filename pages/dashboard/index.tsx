@@ -1,25 +1,57 @@
 import { useUser } from "@/utils/auth";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getAuth } from "firebase/auth";
+import {
+	getFirestore,
+	collection,
+	query,
+	where,
+	onSnapshot,
+	addDoc,
+} from "firebase/firestore";
 import app from "@/config/firebase";
 import Layout from "@/components/MainLayout";
 import MapComponent from "../map";
 
+import { v4 as uuidv4 } from "uuid";
+
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 export default function Dashboard() {
 	const { user, loading } = useUser();
 	const router = useRouter();
 
+	const [dist, setDist] = useState(4);
+
 	const [source, setSource] = useState("");
 	const [destination, setDestination] = useState("");
 	const [showModal, setShowModal] = useState(false);
-	const [selectedCab, setSelectedCab] = useState(null);
+	const [selectedCab, setSelectedCab]: any = useState(null);
 	const [currentStep, setCurrentStep] = useState(0);
+	const [cabs, setCabs] = useState([]);
+
+	// get cabs from Firestore based on source location
+	useEffect(() => {
+		if (source) {
+			const q = query(
+				collection(db, "cabs"),
+				where("source", "==", source)
+			);
+			const unsubscribe = onSnapshot(q, (querySnapshot) => {
+				const cabs = [];
+				querySnapshot.forEach((doc) => {
+					cabs.push({ id: doc.id, ...doc.data() });
+				});
+				setCabs(cabs);
+			});
+			return () => unsubscribe();
+		}
+	}, [source]);
 
 	// start booking
-	const handleBooking = (e) => {
+	const handleBooking = (e: any) => {
 		e.preventDefault();
 		setShowModal(true);
 	};
@@ -35,13 +67,48 @@ export default function Dashboard() {
 		setCurrentStep(1);
 	};
 
-	const handleConfirmation = () => {
-		// TODO: Implement confirmation logic
-		setCurrentStep(2);
+	const [loadBooking, setLoadBooking] = useState(false);
+
+	const handleConfirmation = async () => {
+		setLoadBooking(true);
+		try {
+			const bookingRef = collection(db, "bookings");
+
+			if (selectedCab == null) {
+				return;
+			}
+			const uid = await crypto?.randomUUID();
+			const date = new Date();
+			await addDoc(bookingRef, {
+				id: uid,
+				cabId: selectedCab.id,
+				userId: user.uid,
+				source,
+				destination,
+				time: date,
+				status: "in-progress",
+				price: selectedCab.price * dist,
+			});
+			setCurrentStep(2);
+			setLoadBooking(false);
+		} catch (error) {
+			console.error(error);
+		}
 	};
 
 	const handleBack = () => {
+		if (currentStep <= 0) {
+			setCurrentStep(0);
+			handleModalClose();
+		}
 		setCurrentStep(currentStep - 1);
+	};
+
+	const handleNext = () => {
+		if (currentStep >= 2) {
+			return;
+		}
+		setCurrentStep(currentStep + 1);
 	};
 
 	if (loading) {
@@ -53,7 +120,6 @@ export default function Dashboard() {
 		return null;
 	}
 
-	let cabs = [{ name: "uday", description: "AZ*@2343", price: 12.32 }];
 	console.log(currentStep);
 	return (
 		<Layout>
@@ -110,10 +176,48 @@ export default function Dashboard() {
 					<div className="bg-white p-4 rounded-md">
 						<h2 className="text-lg font-bold mb-2">Book a Cab</h2>
 						{currentStep === 0 && (
-							<p className="mb-4">
-								Please select a cab for your ride from {source}{" "}
-								to {destination}
-							</p>
+							<div>
+								<p className="mb-4">
+									Please select a cab for your ride from{" "}
+									{source} to {destination}
+								</p>
+
+								<div>
+									{cabs.length === 0 ? (
+										<p className="py-4">
+											No Cabs Available
+										</p>
+									) : (
+										cabs.map((cab) => (
+											<div
+												key={cab.id}
+												className="w-1/2 px-2 mb-4"
+											>
+												<div
+													className={`bg-white p-4 rounded-md border ${
+														selectedCab === cab
+															? "border-blue-500"
+															: ""
+													}`}
+													onClick={() => {
+														handleCabSelect(cab);
+													}}
+												>
+													<h3 className="text-lg font-bold mb-2">
+														{cab.name}
+													</h3>
+													<p className="text-gray-700">
+														{cab.desc}
+													</p>
+													<p className="text-gray-700 font-bold mt-2">
+														{cab.price * dist}
+													</p>
+												</div>
+											</div>
+										))
+									)}
+								</div>
+							</div>
 						)}
 						{currentStep === 1 && (
 							<p className="mb-4">
@@ -126,53 +230,50 @@ export default function Dashboard() {
 								Your booking has been confirmed.
 							</p>
 						)}
-						<div className="flex flex-wrap -mx-2">
-							{currentStep === 0 &&
-								cabs.map((cab) => (
-									<div
-										key={cab.id}
-										className="w-1/2 px-2 mb-4"
-									>
-										<div
-											className={`bg-white p-4 rounded-md border ${
-												selectedCab === cab
-													? "border-blue-500"
-													: ""
-											}`}
+						{
+							<div className="flex">
+								{currentStep === 1 ? (
+									<>
+										<button
+											disabled={loadBooking}
+											className="bg-blue-500 disabled:bg-slate-600  hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mr-2"
 											onClick={() => {
-												handleCabSelect(cab);
+												if (
+													selectedCab == null ||
+													source == null ||
+													destination == null
+												) {
+													return;
+												}
+
+												if (loadBooking) {
+													return;
+												}
+
+												handleConfirmation();
 											}}
 										>
-											<h3 className="text-lg font-bold mb-2">
-												{cab.name}
-											</h3>
-											<p className="text-gray-700">
-												{cab.description}
-											</p>
-											<p className="text-gray-700 font-bold mt-2">
-												{cab.price}
-											</p>
-										</div>
-									</div>
-								))}
-						</div>
-						{currentStep === 1 && (
-							<div className="flex">
-								<button
-									className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mr-2"
-									onClick={handleConfirmation}
-								>
-									Confirm
-								</button>
-								<button
-									className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded"
-									onClick={handleBack}
-								>
-									Back
-								</button>
+											Confirm
+										</button>
+
+										<button
+											className={`bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded ${
+												loadBooking ? "hidden" : ""
+											} `}
+											disabled={loadBooking}
+											onClick={handleBack}
+										>
+											Back
+										</button>
+									</>
+								) : null}
+
+								{/* {currentStep === 1 && (
+									
+								)} */}
 							</div>
-						)}
-						{currentStep === 2 && (
+						}
+						{(currentStep === 0 || currentStep === 2) && (
 							<button
 								className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
 								onClick={handleModalClose}
