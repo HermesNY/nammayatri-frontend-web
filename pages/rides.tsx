@@ -15,6 +15,7 @@ import {
 	deleteDoc,
 	doc,
 	getDoc,
+	updateDoc,
 } from "firebase/firestore";
 import app from "@/config/firebase";
 import Layout from "@/components/MainLayout";
@@ -82,7 +83,10 @@ export default function Rides() {
 const Booking = ({ booking }) => {
 	const handleCancelBooking = async (bookingId) => {
 		try {
-			await deleteDoc(doc(db, "bookings", bookingId));
+			await updateDoc(doc(db, "bookings", booking.id), {
+				cancelled: true,
+				status: "cancelled",
+			});
 		} catch (e) {
 			console.error("Error deleting document: ", e);
 		}
@@ -90,45 +94,61 @@ const Booking = ({ booking }) => {
 	const [driverName, setDriverName] = useState(null);
 
 	useEffect(() => {
-		const getDriverName = async (driverId) => {
-			const docRef = doc(db, "drivers", driverId);
-			const docSnap = await getDoc(docRef);
-			if (docSnap.exists()) {
-				setDriverName(docSnap.data().name);
-			} else {
-				console.log("No such document!");
-			}
+		// get dtiver name by query id = cabId
+		const getDriverName = async (cabId) => {
+			const q = query(collection(db, "cabs"), where("id", "==", cabId));
+
+			// get name
+			const unsubscribe = onSnapshot(q, (querySnapshot) => {
+				querySnapshot.forEach((doc) => {
+					setDriverName(doc.data().name);
+				});
+			});
+			return () => unsubscribe();
 		};
-		if (booking.driverId) {
-			getDriverName(booking.driverId);
+		if (booking.cabId) {
+			getDriverName(booking.cabId);
 		}
-	}, [booking.driverId]);
+	}, [booking.cabId]);
 	return (
 		<div
 			key={booking.id}
-			className={`mb-4 ${booking.cancelled ? "bg-gray-200" : ""}`}
+			className={`mb-4 ${booking.cancelled ? "bg-gray-200" : ""} p-4`}
 		>
-			<div className="flex justify-between items-center mb-2">
+			<div className="flex justify-between items-center mb-2 space-x-2">
+				<p className="text-gray-700 max-w-sm min-w-xs">
+					{booking.source?.label || booking.source} to{" "}
+					{booking.destination?.label || booking.destination}
+				</p>
+				<p className="text-gray-700 font-bold">
+					Cost : {booking.price}
+				</p>
+				{booking.cabId && (
+					<p className="text-gray-700">Driver: {driverName}</p>
+				)}
+				{booking.cancelled && (
+					<p className="text-red-500 font-bold">Cancelled</p>
+				)}
 				<h3 className="text-lg font-bold">{booking.cabName}</h3>
-				{!booking.cancelled && (
+				{/* {!booking.cancelled && (
 					<button
 						className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
 						onClick={() => handleCancelBooking(booking.id)}
 					>
 						Cancel
 					</button>
-				)}
+				)} */}
+				{/* 
+					show how long ago booking occured from booking.time
+					eg. 2 hours ago
+
+
+				*/}
+
+				<p className="text-gray-700">
+					{booking.time.toDate().toLocaleString()}
+				</p>
 			</div>
-			<p className="text-gray-700">
-				{booking.source} to {booking.destination}
-			</p>
-			<p className="text-gray-700 font-bold">{booking.price}</p>
-			{booking.driverId && (
-				<p className="text-gray-700">Driver: {driverName}</p>
-			)}
-			{booking.cancelled && (
-				<p className="text-red-500 font-bold">Cancelled</p>
-			)}
 		</div>
 	);
 };

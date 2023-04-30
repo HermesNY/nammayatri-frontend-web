@@ -73,18 +73,6 @@ const loadDirections: (directions: Directions) => void = (
 			});
 			directionsManager.addWaypoint(waypoint1);
 			directionsManager.addWaypoint(waypoint2);
-			console.log(
-				directionsManager,
-				directionsManager.route,
-				directionsManager.summary
-			);
-			directionsManager.calculateDirections((result) => {
-				console.log("res", result);
-				const distance =
-					result.routes[0].routeLegs[0].travelDistance.toFixed(2) +
-					" km";
-				document.getElementById("distance").innerHTML = distance;
-			});
 		});
 	} else {
 		notifyError("Unable to get directions");
