@@ -116,9 +116,12 @@ const Booking = ({ booking }) => {
 			className={`mb-4 ${booking.cancelled ? "bg-gray-200" : ""} p-4`}
 		>
 			<div className="flex justify-between items-center mb-2 space-x-2">
-				<p className="text-gray-700 max-w-sm min-w-xs">
-					{booking.source?.label || booking.source} to{" "}
-					{booking.destination?.label || booking.destination}
+				<p className="text-gray-700 max-w-sm min-w-xs p-1">
+					{booking.source?.label?.slice(0, 15) + "..." ||
+						booking.source}{" "}
+					to{" "}
+					{booking.destination?.label?.slice(0, 15) + "..." ||
+						booking.destination}
 				</p>
 				<p className="text-gray-700 font-bold">
 					Cost : {booking.price}

@@ -39,7 +39,7 @@ const loadMap: () => void = () => {
 		notifyError("Maps SDK not loaded");
 		return;
 	}
-	if (!validateMap()) {
+	if (!validateMap() || true) {
 		try {
 			map = new Microsoft.Maps.Map(document.getElementById("myMap"), {
 				center: new Microsoft.Maps.Location(12.97194, 77.59369),
@@ -88,6 +88,10 @@ const loadDirections: (directions: Directions) => void = (
 			});
 			directionsManager.addWaypoint(waypoint1);
 			directionsManager.addWaypoint(waypoint2);
+
+			// calculate route
+
+			directionsManager.calculateDirections();
 		});
 	} else {
 		notifyError("Unable to get directions");
@@ -143,6 +147,10 @@ export default function Dashboard() {
 	// start booking
 	const handleBooking = (e: any) => {
 		// e.preventDefault();
+		if (!source?.label || !destination?.label) {
+			alert("Please select source and destination");
+			return;
+		}
 		setShowModal(true);
 	};
 
@@ -169,6 +177,7 @@ export default function Dashboard() {
 			}
 			const uid = await crypto?.randomUUID();
 			const date = new Date();
+
 			await addDoc(bookingRef, {
 				id: uid,
 				cabId: selectedCab.id,
@@ -180,6 +189,28 @@ export default function Dashboard() {
 				price: selectedCab.price * dist,
 			});
 			setCurrentStep(2);
+
+			// call api for sending whatsapp update
+			const res = await fetch("/api/sendWhatsApp", {
+				method: "POST",
+				body: JSON.stringify({
+					id: uid,
+					cabId: selectedCab.id,
+					userId: user.uid,
+					driverName: selectedCab.name,
+					from: source.label,
+					to: destination.label,
+					fareAmount: selectedCab.price * dist,
+					driverContact: "+918901523579", //random
+					time: date,
+					status: "in-progress",
+					price: selectedCab.price * dist,
+				}),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			});
+
 			setLoadBooking(false);
 		} catch (error) {
 			console.error(error);
@@ -268,7 +299,7 @@ export default function Dashboard() {
 
 	return (
 		<Layout>
-			<div className="p-4">
+			<div className="p-md-4">
 				<form
 					className="m-4"
 					onSubmit={(e) => {
@@ -278,8 +309,6 @@ export default function Dashboard() {
 							sourceLoc: source,
 							destinationLoc: destination,
 						});
-
-						handleBooking(e);
 					}}
 				>
 					<div className="mb-4">
@@ -332,6 +361,16 @@ export default function Dashboard() {
 						</div>
 					</div>
 					<button type="submit">Get Directions</button>
+					<button
+						type="button"
+						onClick={(e) => {
+							handleBooking(e);
+						}}
+						className="disabled:bg-neutral-500 mx-1"
+						disabled={!source?.label || !destination?.label}
+					>
+						Book now
+					</button>
 				</form>
 			</div>
 			<div className="flex-1">
@@ -347,20 +386,20 @@ export default function Dashboard() {
 					/>
 
 					<div>
-						<div className="mapContainer">
+						<div className="mapContainer max-w-full max-h-full">
 							<div
 								style={{
 									width: "800px",
 									height: "400px",
+									maxWidth: "100%",
+									maxHeight: "100%",
 								}}
 								id="myMap"
 								ref={mapRef}
 							></div>
 						</div>
 
-						<div>
-							Distance: <span id="distance"></span>
-						</div>
+						<div></div>
 					</div>
 				</>
 			</div>
