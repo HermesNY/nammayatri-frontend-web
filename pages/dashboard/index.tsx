@@ -18,89 +18,88 @@ import { v4 as uuidv4 } from "uuid";
 
 var map: any = null;
 
-type LocationType = "source" | "destination";
-
-const notifyError: (message: string) => void = (message) => {
-	//   alert(message);
-};
-
-const validateMicrosoft: () => boolean = () => {
-	return true;
-};
-
-const validateMap: () => boolean = () => {
-	if (validateMicrosoft() && map) return true;
-	return false;
-};
-// var Microsoft: any;
-const loadMap: () => void = () => {
-	// if (!validateMicrosoft()) {
-	// 	notifyError("Maps SDK not loaded");
-	// 	return;
-	// }
-	if (true) {
-		try {
-			map = new Microsoft.Maps.Map(document.getElementById("myMap"), {
-				center: new Microsoft.Maps.Location(12.97194, 77.59369),
-				zoom: 12,
-			});
-		} catch (e) {
-			console.error(e);
-		}
-	} else {
-		notifyError("Map already loaded");
-	}
-};
-
-type Directions = {
-	sourceLoc: { label: string; lat: number; lng: number };
-	destinationLoc: { label: string; lat: number; lng: number };
-};
-
-const loadDirections: (directions: Directions) => void = (
-	directions: Directions
-) => {
-	if (true) {
-		const { sourceLoc, destinationLoc } = directions;
-		Microsoft.Maps.loadModule("Microsoft.Maps.Directions", () => {
-			var directionsManager =
-				new Microsoft.Maps.Directions.DirectionsManager(map);
-			directionsManager.setRequestOptions({
-				routeMode: Microsoft.Maps.Directions.RouteMode.driving,
-				maxRoutes: 1,
-				optimize: 1,
-				routeDraggable: false,
-			});
-			var waypoint1 = new Microsoft.Maps.Directions.Waypoint({
-				address: sourceLoc.label || "Redmond",
-				location: new Microsoft.Maps.Location(
-					sourceLoc.lat || 47.67683029174805,
-					sourceLoc.lng || -122.1099624633789
-				),
-			});
-			var waypoint2 = new Microsoft.Maps.Directions.Waypoint({
-				address: destinationLoc.label || "Seattle",
-				location: new Microsoft.Maps.Location(
-					destinationLoc.lat || 47.59977722167969,
-					destinationLoc.lng || -122.33458709716797
-				),
-			});
-			directionsManager.addWaypoint(waypoint1);
-			directionsManager.addWaypoint(waypoint2);
-
-			// calculate route
-
-			directionsManager.calculateDirections();
-		});
-	} else {
-		notifyError("Unable to get directions");
-	}
-};
-
 const auth = getAuth(app);
 const db = getFirestore(app);
+type LocationType = "source" | "destination";
 
-export default function Dashboard() {
+const Dashboard = () => {
+	const notifyError: (message: string) => void = (message) => {
+		//   alert(message);
+	};
+
+	// const validateMicrosoft: () => boolean = () => {
+	// 	return true;
+	// };
+
+	// const validateMap: () => boolean = () => {
+	// 	if (validateMicrosoft() && map) return true;
+	// 	return false;
+	// };
+	// var Microsoft: any;
+	const loadMap: () => void = () => {
+		// if (!validateMicrosoft()) {
+		// 	notifyError("Maps SDK not loaded");
+		// 	return;
+		// }
+		if (true) {
+			try {
+				map = new Microsoft.Maps.Map(document.getElementById("myMap"), {
+					center: new Microsoft.Maps.Location(12.97194, 77.59369),
+					zoom: 12,
+				});
+			} catch (e) {
+				console.error(e);
+			}
+		} else {
+			notifyError("Map already loaded");
+		}
+	};
+
+	type Directions = {
+		sourceLoc: { label: string; lat: number; lng: number };
+		destinationLoc: { label: string; lat: number; lng: number };
+	};
+
+	const loadDirections: (directions: Directions) => void = (
+		directions: Directions
+	) => {
+		if (true) {
+			const { sourceLoc, destinationLoc } = directions;
+			Microsoft.Maps.loadModule("Microsoft.Maps.Directions", () => {
+				var directionsManager =
+					new Microsoft.Maps.Directions.DirectionsManager(map);
+				directionsManager.setRequestOptions({
+					routeMode: Microsoft.Maps.Directions.RouteMode.driving,
+					maxRoutes: 1,
+					optimize: 1,
+					routeDraggable: false,
+				});
+				var waypoint1 = new Microsoft.Maps.Directions.Waypoint({
+					address: sourceLoc.label || "Redmond",
+					location: new Microsoft.Maps.Location(
+						sourceLoc.lat || 47.67683029174805,
+						sourceLoc.lng || -122.1099624633789
+					),
+				});
+				var waypoint2 = new Microsoft.Maps.Directions.Waypoint({
+					address: destinationLoc.label || "Seattle",
+					location: new Microsoft.Maps.Location(
+						destinationLoc.lat || 47.59977722167969,
+						destinationLoc.lng || -122.33458709716797
+					),
+				});
+				directionsManager.addWaypoint(waypoint1);
+				directionsManager.addWaypoint(waypoint2);
+
+				// calculate route
+
+				directionsManager.calculateDirections();
+			});
+		} else {
+			notifyError("Unable to get directions");
+		}
+	};
+
 	const { user, loading } = useUser();
 	const router = useRouter();
 	const [source, setSource] = useState(null);
@@ -377,6 +376,8 @@ export default function Dashboard() {
 						onLoad={() => {
 							setTimeout(() => {
 								loadMap();
+								suggestSource();
+								suggestDestination();
 							}, 1000);
 						}}
 						src={`https://www.bing.com/api/maps/mapcontrol?callback=GetMap&key=${process.env.NEXT_PUBLIC_MAPS_KEY}`}
@@ -516,4 +517,6 @@ export default function Dashboard() {
 			)}
 		</Layout>
 	);
-}
+};
+
+export default Dashboard;
